@@ -1,4 +1,5 @@
 ﻿#include "../exercise.h"
+#include <cstdio>
 #include <cstring>
 // READ: 类模板 <https://zh.cppreference.com/w/cpp/language/class_template>
 
@@ -8,9 +9,10 @@ struct Tensor4D {
     T *data;
 
     Tensor4D(unsigned int const shape_[4], T const *data_) {
-        unsigned int size = 1;
+        unsigned int size = shape_[0] * shape_[1] * shape_[2] * shape_[3] * sizeof(T);
         // TODO: 填入正确的 shape 并计算 size
         data = new T[size];
+        std::memcpy(shape, shape_, sizeof(shape));
         std::memcpy(data, data_, size * sizeof(T));
     }
     ~Tensor4D() {
@@ -21,13 +23,33 @@ struct Tensor4D {
     Tensor4D(Tensor4D const &) = delete;
     Tensor4D(Tensor4D &&) noexcept = delete;
 
+    T get(unsigned int i0, unsigned int i1, unsigned int i2, unsigned int i3) const {
+        i0 = i0 % shape[0];
+        i1 = i1 % shape[1];
+        i2 = i2 % shape[2];
+        i3 = i3 % shape[3];
+        return data[i0 * shape[1] * shape[2] * shape[3] + i1 * shape[2] * shape[3] + i2 * shape[3] + i3];
+    }
+
+    void inc(unsigned int i0, unsigned int i1, unsigned int i2, unsigned int i3, T value) {
+        data[i0 * shape[1] * shape[2] * shape[3] + i1 * shape[2] * shape[3] + i2 * shape[3] + i3] += value;
+    }
+
     // 这个加法需要支持“单向广播”。
     // 具体来说，`others` 可以具有与 `this` 不同的形状，形状不同的维度长度必须为 1。
     // `others` 长度为 1 但 `this` 长度不为 1 的维度将发生广播计算。
     // 例如，`this` 形状为 `[1, 2, 3, 4]`，`others` 形状为 `[1, 2, 1, 4]`，
     // 则 `this` 与 `others` 相加时，3 个形状为 `[1, 2, 1, 4]` 的子张量各自与 `others` 对应项相加。
     Tensor4D &operator+=(Tensor4D const &others) {
-        // TODO: 实现单向广播的加法
+        for (unsigned int i0 = 0; i0 < shape[0]; ++i0) {
+            for (unsigned int i1 = 0; i1 < shape[1]; ++i1) {
+                for (unsigned int i2 = 0; i2 < shape[2]; ++i2) {
+                    for (unsigned int i3 = 0; i3 < shape[3]; ++i3) {
+                        inc(i0, i1, i2, i3, others.get(i0, i1, i2, i3));
+                    }
+                }
+            }
+        }
         return *this;
     }
 };
